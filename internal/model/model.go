@@ -212,6 +212,34 @@ func (l Ledger) Validate() error {
 	return nil
 }
 
+// Normalize canonicalizes manifest tags stored with surrounding whitespace so
+// that scan requests supplying the canonical (trimmed) spelling can address
+// every asset. It must be called only on a ledger that has already passed
+// Validate, and it preserves the relative order of manifest entries,
+// observations, and report fields. Normalization is limited to manifest tags
+// and their necessary consistency data; unrelated identifiers such as case
+// identifiers are left untouched.
+func (l *Ledger) Normalize() {
+	for index := range l.Inspections {
+		l.Inspections[index].normalizeManifest()
+	}
+}
+
+func (i *Inspection) normalizeManifest() {
+	for tagIndex := range i.Manifest {
+		i.Manifest[tagIndex] = strings.TrimSpace(i.Manifest[tagIndex])
+	}
+	for obsIndex := range i.Observations {
+		i.Observations[obsIndex].AssetTag = strings.TrimSpace(i.Observations[obsIndex].AssetTag)
+	}
+	if i.Report != nil {
+		i.Report.Manifest = append([]string(nil), i.Manifest...)
+		for obsIndex := range i.Report.Observations {
+			i.Report.Observations[obsIndex].AssetTag = strings.TrimSpace(i.Report.Observations[obsIndex].AssetTag)
+		}
+	}
+}
+
 func (i Inspection) validate() error {
 	if strings.TrimSpace(i.CaseID) == "" {
 		return fmt.Errorf("case identifier must not be blank")

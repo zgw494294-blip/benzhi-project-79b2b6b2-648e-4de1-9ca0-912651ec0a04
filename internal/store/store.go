@@ -49,6 +49,7 @@ func (s Store) Load() (model.Ledger, error) {
 	if err := ledger.Validate(); err != nil {
 		return model.Ledger{}, fmt.Errorf("validate ledger %q: %w", s.Path, err)
 	}
+	ledger.Normalize()
 	return ledger, nil
 }
 
