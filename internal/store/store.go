@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"casecheck/internal/model"
 )
@@ -18,7 +19,7 @@ type Store struct {
 
 func New(path string) (Store, error) {
 	path = filepath.Clean(path)
-	if path == "." || path == "" {
+	if path == "." || strings.TrimSpace(path) == "" {
 		return Store{}, fmt.Errorf("ledger path must name a file")
 	}
 	return Store{Path: path}, nil
