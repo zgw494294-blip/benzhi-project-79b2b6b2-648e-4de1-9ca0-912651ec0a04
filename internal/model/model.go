@@ -175,6 +175,9 @@ func (l *Ledger) Seal(caseID string, sealedAt time.Time) (Report, error) {
 			Result:       result,
 			SealedAt:     sealedAt.Format(time.RFC3339Nano),
 		}
+		if err := validateReport(report, *inspection); err != nil {
+			return Report{}, err
+		}
 		inspection.Status = Sealed
 		inspection.Report = &report
 		return cloneReport(report), nil
