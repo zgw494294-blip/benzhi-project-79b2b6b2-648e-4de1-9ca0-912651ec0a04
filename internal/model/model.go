@@ -216,8 +216,12 @@ func (i Inspection) validate() error {
 	if strings.TrimSpace(i.CaseID) == "" {
 		return fmt.Errorf("case identifier must not be blank")
 	}
-	if _, err := validateManifest(i.Manifest); err != nil {
+	cleanManifest, err := validateManifest(i.Manifest)
+	if err != nil {
 		return err
+	}
+	if !sameStrings(cleanManifest, i.Manifest) {
+		return fmt.Errorf("manifest asset tags must not have leading or trailing whitespace")
 	}
 	if i.Status != Open && i.Status != Sealed {
 		return fmt.Errorf("unsupported status %q", i.Status)
