@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"casecheck/internal/model"
 )
@@ -56,6 +57,33 @@ func (s Store) Save(ledger model.Ledger) error {
 	if err := ledger.Validate(); err != nil {
 		return fmt.Errorf("validate ledger before save: %w", err)
 	}
+	lock, err := os.OpenFile(s.Path+".lock", os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return fmt.Errorf("open ledger lock: %w", err)
+	}
+	defer lock.Close()
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("lock ledger: %w", err)
+	}
+	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+
+	current, err := s.Load()
+	if err != nil {
+		return err
+	}
+	cases := make(map[string]struct{}, len(ledger.Inspections))
+	for _, inspection := range ledger.Inspections {
+		cases[inspection.CaseID] = struct{}{}
+	}
+	for _, inspection := range current.Inspections {
+		if _, exists := cases[inspection.CaseID]; !exists {
+			ledger.Inspections = append(ledger.Inspections, inspection)
+		}
+	}
+	if err := ledger.Validate(); err != nil {
+		return fmt.Errorf("validate merged ledger before save: %w", err)
+	}
+
 	parent := filepath.Dir(s.Path)
 	base := filepath.Base(s.Path)
 	temporary, err := os.CreateTemp(parent, "."+base+".tmp-*")
