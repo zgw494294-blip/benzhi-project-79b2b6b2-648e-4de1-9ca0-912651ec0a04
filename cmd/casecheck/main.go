@@ -34,12 +34,11 @@ func main() {
 
 func run(args []string, output io.Writer) int {
 	if len(args) == 0 {
-		writeJSON(output, map[string]any{
+		return writeJSON(output, map[string]any{
 			"ok":       true,
 			"commands": []string{"open", "scan", "seal", "show", "smoke"},
 			"ledger":   defaultLedgerPath,
 		})
-		return 0
 	}
 
 	ledgerPath, remaining, err := parseGlobalLedger(args)
@@ -63,12 +62,11 @@ func run(args []string, output io.Writer) int {
 	case "smoke":
 		return runSmoke(commandArgs, output)
 	case "help", "--help", "-h":
-		writeJSON(output, map[string]any{
+		return writeJSON(output, map[string]any{
 			"ok":       true,
 			"commands": []string{"open", "scan", "seal", "show", "smoke"},
 			"ledger":   defaultLedgerPath,
 		})
-		return 0
 	default:
 		return writeError(output, fmt.Errorf("unknown command %q", command))
 	}
@@ -129,8 +127,7 @@ func runOpen(args []string, ledgerPath string, output io.Writer) int {
 	if err := ledgerStore.Save(ledger); err != nil {
 		return writeError(output, err)
 	}
-	writeJSON(output, map[string]any{"ok": true, "inspection": inspection})
-	return 0
+	return writeJSON(output, map[string]any{"ok": true, "inspection": inspection})
 }
 
 func runScan(args []string, ledgerPath string, output io.Writer) int {
@@ -182,8 +179,7 @@ func runScan(args []string, ledgerPath string, output io.Writer) int {
 	if err := ledgerStore.Save(ledger); err != nil {
 		return writeError(output, err)
 	}
-	writeJSON(output, map[string]any{"ok": true, "inspection": inspection})
-	return 0
+	return writeJSON(output, map[string]any{"ok": true, "inspection": inspection})
 }
 
 func runSeal(args []string, ledgerPath string, output io.Writer) int {
@@ -215,8 +211,7 @@ func runSeal(args []string, ledgerPath string, output io.Writer) int {
 	if err := ledgerStore.Save(ledger); err != nil {
 		return writeError(output, err)
 	}
-	writeJSON(output, map[string]any{"ok": true, "report": report})
-	return 0
+	return writeJSON(output, map[string]any{"ok": true, "report": report})
 }
 
 func runShow(args []string, ledgerPath string, output io.Writer) int {
@@ -248,8 +243,7 @@ func runShow(args []string, ledgerPath string, output io.Writer) int {
 	if inspection.Report == nil {
 		return writeError(output, fmt.Errorf("case %q has not been sealed", caseIDValue))
 	}
-	writeJSON(output, map[string]any{"ok": true, "report": *inspection.Report})
-	return 0
+	return writeJSON(output, map[string]any{"ok": true, "report": *inspection.Report})
 }
 
 func runSmoke(args []string, output io.Writer) int {
@@ -307,8 +301,7 @@ func runSmoke(args []string, output io.Writer) int {
 	if inspection.Report == nil || inspection.Report.Result != model.Cleared || inspection.Report.Result != report.Result {
 		return writeError(output, fmt.Errorf("smoke report did not clear the complete inspection"))
 	}
-	writeJSON(output, map[string]any{"ok": true, "report": *inspection.Report})
-	return 0
+	return writeJSON(output, map[string]any{"ok": true, "report": *inspection.Report})
 }
 
 func newFlagSet(name string) *flag.FlagSet {
@@ -339,10 +332,13 @@ func writeError(output io.Writer, err error) int {
 	return 1
 }
 
-func writeJSON(output io.Writer, value any) {
+func writeJSON(output io.Writer, value any) int {
 	encoder := json.NewEncoder(output)
 	encoder.SetIndent("", "  ")
-	_ = encoder.Encode(value)
+	if err := encoder.Encode(value); err != nil {
+		return 1
+	}
+	return 0
 }
 
 var timeNow = func() time.Time {
